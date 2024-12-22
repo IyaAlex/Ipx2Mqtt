@@ -32,34 +32,45 @@ class Mqtt2Ipx(Thread):
         payload = str(msg.payload, encoding="utf-8")
 
         relay = topic.replace(Constantes.mqttTopic, '').replace('/light/', '').replace('/switch/', '').replace('/set', '')
-        json_data = json.loads(payload)
-        if relay.lower().startswith("d"):
-            # Gestion des XDimmer
-            dimmer = relay[1:2]
-            channel = relay[3:]
-            urlIpx += "/user/api.cgi?SetDim=" + dimmer + "&DimCha=" + channel + "&DimValue="
-            if "OFF" == json_data['state']:
-                urlIpx += "0"
-            elif "ON" == json_data['state']:
-                brightness = ""
-                if "brightness" in json_data:
-                    # On change d'échelle de 255 à 100
-                    brightness = str(int(int(json_data['brightness'])/2.55))
-                else:
-                    # Si la valeur n'est pas renseignée on prend la dernière en statut
-                    req = requests.get("http://" + Constantes.ipxHost + "/api/xdevices.json?key=" + Constantes.ipxApiKey + "&Get=G")
-                    jsonStatus = json.loads(req.text)
-                    numStatus = (int(dimmer)-1)*4+int(channel)
-                    brightness = str(jsonStatus['G' + str(numStatus)]['Valeur'])
-                urlIpx += brightness
+
+        # Is a light
+        if payload.lower().startswith("{"):     
+            json_data = json.loads(payload)
+            if relay.lower().startswith("d"):
+                # Gestion des XDimmer
+                dimmer = relay[1:2]
+                channel = relay[3:]
+                urlIpx += "/user/api.cgi?SetDim=" + dimmer + "&DimCha=" + channel + "&DimValue="
+                if "OFF" == json_data['state']:
+                    urlIpx += "0"
+                elif "ON" == json_data['state']:
+                    brightness = ""
+                    if "brightness" in json_data:
+                        # On change d'échelle de 255 à 100
+                        brightness = str(int(int(json_data['brightness'])/2.55))
+                    else:
+                        # Si la valeur n'est pas renseignée on prend la dernière en statut
+                        req = requests.get("http://" + Constantes.ipxHost + "/api/xdevices.json?key=" + Constantes.ipxApiKey + "&Get=G")
+                        jsonStatus = json.loads(req.text)
+                        numStatus = (int(dimmer)-1)*4+int(channel)
+                        brightness = str(jsonStatus['G' + str(numStatus)]['Valeur'])
+                        urlIpx += brightness
+            else:
+                # Gestion des relais IPX et X8R
+                urlIpx += '/api/xdevices.json?key=' + Constantes.ipxApiKey + '&'
+                if "ON" == json_data['state']:
+                    urlIpx += 'SetR='
+                elif "OFF" == json_data['state']:
+                    urlIpx += 'ClearR='
+        # Is a switch
         else:
-            # Gestion des relais IPX et X8R
             urlIpx += '/api/xdevices.json?key=' + Constantes.ipxApiKey + '&'
-            if "ON" == json_data['state']:
+            if "ON" == payload:
                 urlIpx += 'SetR='
-            elif "OFF" == json_data['state']:
+            elif "OFF" == payload:
                 urlIpx += 'ClearR='
-            urlIpx += relay.replace('r', '')
+
+        urlIpx += relay.replace('r', '')
         # Reqete de commande à l'IPX
         requests.get(urlIpx, auth=(Constantes.ipxLogin, Constantes.ipxPassword))
 
