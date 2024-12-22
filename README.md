@@ -54,7 +54,7 @@ docker run -d --name ipx -p 8080:8080 \
     -e IPX_API_KEY=apikey \
     -e IPX_LOGIN=admin \
     -e IPX_PASSWORD=password \
-    leclubber/ipx2mqtt
+    iyaiyaiya/ipx2mqtt
 ```
 
 Ou en docker-compose (recommandé) :
@@ -64,7 +64,7 @@ version: '3'
 services:
   ipx:
     container_name: ipx
-    image: leclubber/ipx2mqtt
+    image: iyaiyaiya/ipx2mqtt
     ports:
       - 8080:8080
     environment:
